@@ -1,7 +1,7 @@
 {
   "name": "TSC Cricket Score",
   "short_name": "TSC Score",
-  "description": "Live cricket scoring for Salavora Taltola Sporting Club \u2014 ball-by-ball, offline, live sharing.",
+  "description": "Live cricket scoring for Salavora Taltola Sporting Club",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -10,34 +10,11 @@
   "background_color": "#FFFFFF",
   "theme_color": "#065F46",
   "lang": "en",
-  "categories": [
-    "sports",
-    "utilities"
-  ],
+  "categories": ["sports", "utilities"],
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "maskable-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192-3.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-3.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "maskable-192-3.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "maskable-512-3.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
