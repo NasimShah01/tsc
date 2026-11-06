@@ -1155,6 +1155,40 @@ body[data-theme-color="tsc"][data-theme="dark"]{
 .sv-cbx .cbx-pship{padding:2px 0 6px;font-size:12px}
 .sv-cbx .cbx-tbl th,.sv-cbx .cbx-tbl td{padding-top:5px;padding-bottom:5px}
 .sv-graphs{margin-top:14px}
+/* ===== TSC theme v2: deep blue surfaces + deep yellow bold text ===== */
+[data-theme-color="tsc"]{--tsc-deep:#0A2A66;--tsc-deep2:#061B44;--tsc-gold:#FFC90E}
+[data-theme-color="tsc"] .topbar{background:linear-gradient(135deg,#0B3480,#071F52);border-bottom:3px solid var(--tsc-gold)}
+[data-theme-color="tsc"] .topbar h1{color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .mc2{background:linear-gradient(155deg,#0C3A8C 0%,#0A2A66 55%,#061B44 100%);border-color:rgba(255,201,14,.28);box-shadow:0 10px 24px rgba(6,27,68,.35)}
+[data-theme-color="tsc"] .mc2::before{background:linear-gradient(90deg,var(--tsc-gold),#FFE066)}
+[data-theme-color="tsc"] .mc2-tname{color:var(--tsc-gold);font-weight:900;letter-spacing:.2px}
+[data-theme-color="tsc"] .mc2-type{color:var(--tsc-gold);background:rgba(255,201,14,.12);border-color:rgba(255,201,14,.45);font-weight:900}
+[data-theme-color="tsc"] .mc2-vs{color:#0A2A66;background:var(--tsc-gold);border-color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .mc2-meta,[data-theme-color="tsc"] .mc2-meta *{color:#E7EEFB;font-weight:700}
+[data-theme-color="tsc"] .mc2-score{color:var(--tsc-gold);background:rgba(255,255,255,.07);font-weight:800}
+[data-theme-color="tsc"] .ucd{background:rgba(255,255,255,.06);border-color:rgba(255,201,14,.30)}
+[data-theme-color="tsc"] .ucd-time{color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .ucd-at,[data-theme-color="tsc"] .mc2-tsub,[data-theme-color="tsc"] .mc2-cd,[data-theme-color="tsc"] .mc2-note,[data-theme-color="tsc"] .mc2-need{color:#C9D8F2}
+[data-theme-color="tsc"] .mc2-btn{background:#fff;color:#0A2A66;font-weight:900}
+[data-theme-color="tsc"] .mc2-btn.primary,[data-theme-color="tsc"] .mc2-btn.start{background:var(--tsc-gold);color:#0A2A66;box-shadow:0 6px 16px rgba(255,201,14,.30)}
+[data-theme-color="tsc"] .mc2-btn.ghost{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.28)}
+[data-theme-color="tsc"] .score-hero{background:linear-gradient(150deg,#0C3A8C 0%,#0A2A66 60%,#061B44 100%);border-bottom:3px solid var(--tsc-gold)}
+[data-theme-color="tsc"] .score-hero .score-big .runs{color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .score-hero .teams-line{color:#E7EEFB;font-weight:800}
+[data-theme-color="tsc"] .hx-hero{background:linear-gradient(140deg,#0C3A8C 0%,#061B44 75%);border-bottom:3px solid var(--tsc-gold)}
+[data-theme-color="tsc"] .hx-hero b{color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .sch{background:linear-gradient(170deg,#0C3A8C 0%,#061B44 100%)}
+[data-theme-color="tsc"] .sch-hero-t,[data-theme-color="tsc"] .sch-teams b,[data-theme-color="tsc"] .sch-time{color:var(--tsc-gold);font-weight:900}
+[data-theme-color="tsc"] .wp,[data-theme-color="tsc"] .rb-hero{background:linear-gradient(150deg,#0A2A66,#061B44)}
+[data-theme-color="tsc"] .section-title::before{background:var(--tsc-gold)}
+[data-theme-color="tsc"] .home-card[data-action="new-match"] .hc-icon{background:var(--tsc-gold)}
+[data-theme-color="tsc"] .hx-hero .hx-new{background:var(--tsc-gold)}
+
+body[data-theme="dark"][data-theme-color="tsc"] .topbar{background:linear-gradient(135deg,#0B3480,#071F52) !important}
+body[data-theme="dark"][data-theme-color="tsc"] .mc2{background:linear-gradient(155deg,#0C3A8C 0%,#0A2A66 55%,#061B44 100%) !important;border-color:rgba(255,201,14,.28) !important}
+body[data-theme="dark"][data-theme-color="tsc"] .score-hero,body[data-theme="dark"][data-theme-color="tsc"] .hx-hero{background:linear-gradient(150deg,#0C3A8C 0%,#0A2A66 60%,#061B44 100%) !important}
+body[data-theme="dark"][data-theme-color="tsc"] .sch{background:linear-gradient(170deg,#0C3A8C 0%,#061B44 100%) !important}
+body[data-theme="dark"][data-theme-color="tsc"] .mc2-vs{color:#0A2A66 !important;background:#FFC90E !important}
 </style>
 </head>
 <body>
@@ -2046,7 +2080,7 @@ function headToHeadScreenHTML(){
 }
 const TEAM_COLORS = ['#7C3AED','#D946EF','#170F2E','#064E3B','#0B6E4F','#1866DB','#00897B','#0E8A63','#B98A1E','#1E7A8C'];
 const APP_THEME_COLORS = [
-  {id:'tsc', label:'TSC Blue · Yellow · Navy (Premium)', swatch:'#1677FF'},
+  {id:'tsc', label:'TSC Deep Blue · Yellow (Premium)', swatch:'#0A2A66'},
   {id:'violet', label:'Violet · Magenta · Lavender', swatch:'#7C3AED'},
   {id:'forest', label:'Dark Green · White', swatch:'#064E3B'},
   {id:'cricbuzz', label:'Blue · White · Green', swatch:'#009270'},
@@ -6936,6 +6970,7 @@ function uiResolvedTheme(){
   return t==='dark' ? 'dark' : 'light';
 }
 function uiMigrate(){
+  if(DB.settings && !DB.settings.tscBlueApplied){ DB.settings.tscBlueApplied=true; DB.settings.tscPremiumApplied=true; DB.settings.themeColor='tsc'; try{ StorageManager.save(); }catch(e){} return; }
   if(!DB.settings || DB.settings.tscPremiumApplied) return;
   DB.settings.tscPremiumApplied = true;
   DB.settings.themeColor = 'tsc';
