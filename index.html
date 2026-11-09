@@ -1197,6 +1197,7 @@ body[data-theme="dark"][data-theme-color="tsc"] .mc2-vs{color:#0A2A66 !important
 .ts-chip.on{border-color:var(--clr-primary);background:var(--clr-primary);color:#fff}
 .ts-chip .mc-icon,.ts-chip img{border-radius:50% !important}
 .ts-go{position:sticky;bottom:calc(var(--nav-h,64px) + 8px);margin-top:14px}
+.ts-go.static{position:static}
 .ts-res{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ts-team{background:var(--clr-surface);border:1px solid var(--clr-outline);border-radius:16px;padding:10px;box-shadow:var(--shadow-1)}
 .ts-th{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ts-th b{font-size:15px}.ts-th span{font-size:11.5px;color:var(--clr-text-dim);font-weight:700}
@@ -7318,7 +7319,7 @@ function tsScreenHTML(){
     <div class="ts-head"><b>${sel.size} selected</b><span><button class="btn btn-ghost btn-sm" data-ts-all>Select all</button><button class="btn btn-ghost btn-sm" data-ts-none>Clear</button></span></div>
     <input class="input" id="tsQ" placeholder="Search player…" value="${esc(AppState.tsQ||'')}" style="margin-bottom:8px">
     <div class="ts-list">${players.map(p=>`<button class="ts-chip ${sel.has(p.id)?'on':''}" data-ts-p="${p.id}">${avatarHTML(p.photo, p.jersey?('#'+p.jersey):initials(p.name), 26)}<span>${esc(p.name)}</span></button>`).join('')}</div>
-    <div class="ts-go"><button class="btn btn-primary btn-block" data-ts-go ${sel.size<4?'disabled':''}>🎲 Make 2 balanced teams</button></div>`;
+    <div class="ts-go ${res?'static':''}"><button class="btn btn-primary btn-block" data-ts-go ${sel.size<4?'disabled':''}>🎲 Make 2 balanced teams</button></div>`;
 }
 function tsShareText(){
   const r=TS.res; if(!r) return '';
