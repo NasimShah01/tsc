@@ -7368,7 +7368,13 @@ function arBuild(){
   return done.map(m=>{
     const bpo=m.ballsPerOver||6;
     const pom=m.awards&&m.awards.playerOfMatch?playerName(m.awards.playerOfMatch):'';
+    const NM=[], ix=pid=>{ if(!pid) return -1; const n=playerName(pid); let k=NM.indexOf(n); if(k<0){ NM.push(n); k=NM.length-1; } return k; };
+    const xi=side=>(squadOf(m,side)||[]).map(p=>typeof p==='string'?playerName(p):(p&&p.name)||'').filter(Boolean);
+    const EXC={wide:'w',noball:'n',bye:'b',legbye:'l'};
+    const bbOf=inn=>(inn.timeline||[]).filter(ev=>ev&&ev.strikerId).map(ev=>[ix(ev.strikerId),ix(ev.bowlerId),ev.runs||0,ev.extraRuns||0,EXC[ev.extraType]||'',ev.wicket?1:0,ev.wicket?ix(ev.dismissedId||ev.strikerId):-1,ev.wicket&&ev.wicket.type||'']);
+    const BB=(m.innings||[]).filter(inn=>Object.keys(inn.batters||{}).length).map(bbOf);
     return {id:m.id, d:m.date||'', a:teamOf(m,'A').name, b:teamOf(m,'B').name, res:(m.result&&m.result.text)||'', t:tName(m.tournamentId), ov:m.overs||null, bpo, pom,
+      v:m.venue||'', tw:m.tossWinner?teamOf(m,m.tossWinner).name:'', tc:m.tossChoice||'', xa:xi('A'), xb:xi('B'), nm:NM, bb:BB,
       inns:(m.innings||[]).filter(inn=>Object.keys(inn.batters||{}).length).map(inn=>({
         bt:teamOf(m,inn.battingTeam).name, r:inn.runs||0, w:inn.wickets||0, bl:inn.balls||0,
         ex:inn.extras||{},
