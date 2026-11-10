@@ -5297,6 +5297,7 @@ function lvHandleAction(a, el){
     try{ if(typeof ssSoon==='function') ssSoon(); }catch(e){}
     try{ if(typeof lvCleanupSoon==='function') lvCleanupSoon(); }catch(e){}
     try{ if(typeof evSoon==='function') evSoon(); }catch(e){}
+    try{ if(typeof arSoon==='function') arSoon(); }catch(e){}
     return ok;
   };
   DB.matches.forEach(m=>{ lvSigs[m.id]=lvSig(m); }); lvSeeded = true;
@@ -6661,7 +6662,7 @@ async function ssPublish(manual){
     const a = await lvToken();
     await lvPut('live/site', {owner:a.uid, stats, updatedAt:{'.sv':'timestamp'}});
     lvSet('tscSiteStats_v1', {sig, at:Date.now(), err:null});
-    if(manual){ toast('Website stats updated'); render(); try{ evPublish(true); }catch(e){} }
+    if(manual){ toast('Website stats updated'); render(); try{ evPublish(true); }catch(e){} try{ arPublish(true); }catch(e){} }
   }catch(e){
     lvSet('tscSiteStats_v1', Object.assign(st, {err:String(e.message||e)}));
     if(manual){ toast('Publish failed: '+String(e.message||e)); render(); }
@@ -7337,6 +7338,56 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-ts-share]')){ const txt=tsShareText(); try{ if(navigator.share){ await navigator.share({text:txt}); return; } }catch(err){ return; } try{ await navigator.clipboard.writeText(txt); toast('Copied — paste in WhatsApp/Messenger'); }catch(err){} return; }
 });
 document.addEventListener('input',e=>{ if(e.target&&e.target.id==='tsQ'){ AppState.tsQ=e.target.value; const pos=e.target.selectionStart; render(); const el=document.getElementById('tsQ'); if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(_){} } } });
+
+/* ==========================================================================
+   WEBSITE SCORECARD ARCHIVE (additive, read-only on match data)
+   Publishes compact full scorecards of completed matches to /live/archive so
+   the club website can show every scorecard + yearly awards. Uses the same
+   "Publish stats to the club website" switch. Nothing in matches is changed.
+   ========================================================================== */
+function arHowOut(x){
+  if(!x.out) return 'not out';
+  const bw=x.bowlerId?playerName(x.bowlerId):'', f=x.fielderId?playerName(x.fielderId):'';
+  switch(x.outType){
+    case 'bowled': return 'b '+bw;
+    case 'caught': return (f&&f!==bw?'c '+f+' ':'c & ')+'b '+bw;
+    case 'lbw': return 'lbw b '+bw;
+    case 'runout': return 'run out'+(f?' ('+f+')':'');
+    case 'stumped': return 'st '+(f||'')+' b '+bw;
+    case 'hitwicket': return 'hit wicket b '+bw;
+    case 'retired': return 'retired';
+    default: return x.outType||'out';
+  }
+}
+function arBuild(){
+  const done=DB.matches.filter(m=>m.status==='completed').slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const tName=id=>{ const t=(DB.tournaments||[]).find(x=>x.id===id); return t?t.name:''; };
+  return done.map(m=>{
+    const bpo=m.ballsPerOver||6;
+    const pom=m.awards&&m.awards.playerOfMatch?playerName(m.awards.playerOfMatch):'';
+    return {id:m.id, d:m.date||'', a:teamOf(m,'A').name, b:teamOf(m,'B').name, res:(m.result&&m.result.text)||'', t:tName(m.tournamentId), ov:m.overs||null, bpo, pom,
+      inns:(m.innings||[]).filter(inn=>Object.keys(inn.batters||{}).length).map(inn=>({
+        bt:teamOf(m,inn.battingTeam).name, r:inn.runs||0, w:inn.wickets||0, bl:inn.balls||0,
+        ex:inn.extras||{},
+        bat:Object.entries(inn.batters||{}).map(([pid,x])=>[playerName(pid),x.runs||0,x.balls||0,x.fours||0,x.sixes||0,arHowOut(x)]),
+        bowl:Object.entries(inn.bowlers||{}).map(([pid,w])=>[playerName(pid),w.balls||0,w.runs||0,w.wickets||0]),
+        fow:(inn.fallOfWickets||[]).map(f=>[f.score,f.wicket,f.over,f.playerName])
+      }))};
+  });
+}
+let arTimer=null;
+function arSoon(ms){ clearTimeout(arTimer); arTimer=setTimeout(()=>arPublish(false), ms||9000); }
+async function arPublish(manual){
+  if(LV_VIEWER) return;
+  if(typeof ssEnabled==='function' && !ssEnabled() && !manual) return;
+  if(!lvConfigured() || !navigator.onLine) return;
+  let list; try{ list=arBuild(); }catch(e){ return; }
+  const sig=JSON.stringify(list);
+  const st=lvGet('tscArchive_v1',{});
+  if(!manual && st.sig===sig) return;
+  try{ const a=await lvToken(); await lvPut('live/archive',{owner:a.uid, matches:list, updatedAt:{'.sv':'timestamp'}}); lvSet('tscArchive_v1',{sig,at:Date.now()}); }catch(e){}
+}
+setTimeout(()=>{ try{ if(!LV_VIEWER) arPublish(false); }catch(e){} }, 16000);
 
 /* ---------------------------- BACKUP SYSTEM ---------------------------- */
 function exportBackup(){
