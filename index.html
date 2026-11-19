@@ -3055,6 +3055,7 @@ function matchResultHTML(m){
   <button class="btn btn-outline btn-block" style="margin-top:10px" data-xi="${m.id}">🧢 Playing XI poster</button>
   <button class="btn btn-outline btn-block" style="margin-top:10px" data-action="share-scorecard-image" data-id="${m.id}">${icon('download')} Share Scorecard Image</button>
   <button class="btn btn-outline btn-block" style="margin-top:10px" data-action="export-pdf">${icon('pdf')} Export PDF Scorecard</button>
+  <button class="btn btn-primary btn-block" style="margin-top:10px" data-spdf="${m.id}">${icon('download')} Download PDF Scorecard</button>
   ${DB.settings.aiAssistantEnabled?`<button class="btn btn-outline btn-block" style="margin-top:10px" data-action="ai-match-report" data-id="${m.id}">🤖 AI Match Report</button>`:''}
   <button class="btn btn-ghost btn-block" style="margin-top:10px" data-action="go-home">Back to Home</button>
   `;
@@ -3118,6 +3119,7 @@ function scorecardScreenHTML(){
     ${inn.fallOfWickets.length? inn.fallOfWickets.map(f=>`<div class="fow-line">${f.wicket}-${f.score} (${esc(f.playerName)}, ${f.over} ov)</div>`).join('') : `<p style="margin:0;font-size:12.5px;color:var(--clr-text-dim)">No wickets yet</p>`}
   </div>
   <button class="btn btn-outline btn-block" style="margin-top:16px" data-action="export-pdf">${icon('pdf')} Export PDF</button>
+  <button class="btn btn-primary btn-block" style="margin-top:10px" data-spdf="cur">${icon('download')} Download PDF</button>
   `;
 }
 function dismissalText(inn,pid){
@@ -3791,6 +3793,7 @@ function openMoreMenu(){
       ${impactPlayerEligibleSides(m).length?`<div class="option-item" data-more="impact"><span class="oi-icon">🔄</span>Impact Player</div>`:''}
       <div class="option-item" data-more="teamsheet"><span class="oi-icon">📋</span>Team Sheet</div>
       <div class="option-item" data-more="pdf"><span class="oi-icon">P</span>Export PDF</div>
+      <div class="option-item" data-more="spdf"><span class="oi-icon">⬇</span>Download PDF</div>
       <div class="option-item danger" data-more="abandon"><span class="oi-icon">A</span>Abandon Match</div>
     </div>
   `);
@@ -3811,6 +3814,7 @@ function openMoreMenu(){
     if(act==='ai') openAIAssistantSheet(m);
     if(act==='impact') openImpactPlayerSheet(m);
     if(act==='pdf') exportMatchPDF(m);
+    if(act==='spdf') downloadScorecardPDF(m);
     if(act==='abandon') showConfirm('Abandon Match','This will end the match with no result. This cannot be undone.','Abandon',()=>abandonMatch(m));
   });
 }
@@ -4152,6 +4156,7 @@ function openMatchMenu(matchId){
       <div class="option-item" data-mm="open"><span class="oi-icon">O</span>${m.status==='live'?'Resume':'View'} Match</div>
       <div class="option-item" data-mm="scorecard"><span class="oi-icon">S</span>Scorecard</div>
       <div class="option-item" data-mm="pdf"><span class="oi-icon">P</span>Export PDF</div>
+      <div class="option-item" data-mm="spdf"><span class="oi-icon">⬇</span>Download PDF</div>
       <div class="option-item" data-mm="duplicate"><span class="oi-icon">D</span>Duplicate</div>
       <div class="option-item danger" data-mm="delete"><span class="oi-icon">X</span>Delete</div>
     </div>
@@ -4164,6 +4169,7 @@ function openMatchMenu(matchId){
     if(act==='open'){ AppState.currentMatchId=m.id; pushScreen('live'); }
     if(act==='scorecard'){ AppState.currentMatchId=m.id; pushScreen('scorecard'); }
     if(act==='pdf') exportMatchPDF(m);
+    if(act==='spdf') downloadScorecardPDF(m);
     if(act==='duplicate'){
       const copy = JSON.parse(JSON.stringify(m));
       copy.id = uid('m'); copy.status='live'; copy.result=null; copy.date=new Date().toISOString().slice(0,10);
@@ -8199,6 +8205,102 @@ function exportTeamSheet(m){
   toast('Opening print dialog…');
   setTimeout(()=>window.print(), 250);
 }
+
+/* TSC PDF core: canvas pages -> JPEG -> real .pdf (Bangla-safe, no library) */
+function tspdfFile(jpgs,W,H){
+  const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+  const push=x=>{ const u=typeof x==='string'?enc.encode(x):x; parts.push(u); len+=u.length; };
+  const obj=(n,fn)=>{ offs[n]=len; push(n+' 0 obj\n'); fn(); push('\nendobj\n'); };
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const n=jpgs.length, kids=[]; for(let i=0;i<n;i++) kids.push((3+i*3)+' 0 R');
+  obj(1,()=>push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2,()=>push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+n+' >>'));
+  const pw=595, ph=Math.round(595*H/W);
+  jpgs.forEach((jpg,i)=>{ const p=3+i*3, im=p+1, ct=p+2;
+    obj(p,()=>push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pw+' '+ph+'] /Resources << /XObject << /Im'+i+' '+im+' 0 R >> >> /Contents '+ct+' 0 R >>'));
+    obj(im,()=>{ push('<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n'); push(jpg); push('\nendstream'); });
+    const cs='q '+pw+' 0 0 '+ph+' 0 0 cm /Im'+i+' Do Q'; obj(ct,()=>push('<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream'));
+  });
+  const xref=len, total=3+n*3;
+  push('xref\n0 '+total+'\n0000000000 65535 f \n'); for(let i=1;i<total;i++) push(String(offs[i]).padStart(10,'0')+' 00000 n \n');
+  push('trailer\n<< /Size '+total+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
+  return new Blob(parts,{type:'application/pdf'});
+}
+async function tspdfBuild(S){
+  const W=1240,H=1754,M=70,TW=W-2*M,FF="'Noto Sans Bengali','Hind Siliguri',Roboto,Arial,sans-serif";
+  const logo=await new Promise(r=>{ if(!S.logo) return r(null); const im=new Image(); im.onload=()=>r(im); im.onerror=()=>r(null); im.src=S.logo; });
+  const pages=[]; let cv,g,y;
+  const clip=(s,w)=>{ s=String(s==null?'':s); if(g.measureText(s).width<=w) return s; while(s.length>1&&g.measureText(s+'…').width>w) s=s.slice(0,-1); return s+'…'; };
+  const newPage=()=>{ if(cv) pages.push(cv); cv=document.createElement('canvas'); cv.width=W; cv.height=H; g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+    const first=!pages.length, hh=first?210:90; g.fillStyle='#0B6E4F'; g.fillRect(0,0,W,hh); g.fillStyle='#FFD54F'; g.fillRect(0,hh,W,8); g.textAlign='left';
+    if(first){ const x0=M+(logo?145:0); if(logo) g.drawImage(logo,M,40,120,120);
+      g.fillStyle='#FFD54F'; g.font='800 48px '+FF; g.fillText(S.title,x0,92);
+      g.fillStyle='#fff'; g.font='700 30px '+FF; g.fillText(clip(S.head,W-M-x0),x0,142);
+      g.fillStyle='#D6EADF'; g.font='400 24px '+FF; g.fillText(clip(S.sub||'',W-M-x0),x0,184); y=250; }
+    else { g.fillStyle='#fff'; g.font='700 30px '+FF; g.fillText(clip(S.head,TW),M,58); y=140; }
+    g.fillStyle='#6B7A73'; g.font='400 20px '+FF; g.fillText(S.footer,M,H-36); g.textAlign='right'; g.fillText(S.pageWord+' '+(pages.length+1),W-M,H-36); g.textAlign='left'; };
+  const need=h=>{ if(y+h>H-80) newPage(); };
+  const para=(txt,font,col,lh)=>{ g.font=font; const lines=[]; let line=''; String(txt).split(/\s+/).forEach(w=>{ const t=line?line+' '+w:w; if(g.measureText(t).width>TW&&line){ lines.push(line); line=w; } else line=t; }); if(line) lines.push(line);
+    lines.forEach(l=>{ need(lh); g.font=font; g.fillStyle=col; g.textAlign='left'; g.fillText(l,M,y+lh-10); y+=lh; }); };
+  const table=(cols,rows,sub)=>{ const rh=sub?72:52, hh=50, n=cols.length, f=sub?.40:.36, wd=cols.map((_,i)=>i?(1-f)/(n-1):f);
+    const head=()=>{ g.fillStyle='#F4F7F5'; g.fillRect(M,y,TW,hh); g.fillStyle='#334155'; g.font='700 22px '+FF; let x=M; cols.forEach((c,i)=>{ const w=wd[i]*TW; g.textAlign=i?'center':'left'; g.fillText(c,i?x+w/2:x+14,y+33); x+=w; }); y+=hh; };
+    need(hh+rh); head();
+    rows.forEach(r=>{ if(y+rh>H-80){ newPage(); head(); }
+      g.strokeStyle='#DDE5E1'; g.lineWidth=1; g.beginPath(); g.moveTo(M,y+rh); g.lineTo(M+TW,y+rh); g.stroke();
+      let x=M; r.forEach((c,i)=>{ const w=wd[i]*TW; g.textAlign=i?'center':'left';
+        if(typeof c==='object'){ g.fillStyle='#12211B'; g.font='700 27px '+FF; g.fillText(clip(c.t,w-24),x+14,y+32); g.fillStyle='#6B7A73'; g.font='400 20px '+FF; g.fillText(clip(c.s,w-24),x+14,y+58); }
+        else { const hi=sub&&i===1; g.fillStyle=hi?'#0B6E4F':'#12211B'; g.font=(hi?'800':'500')+' 26px '+FF; g.fillText(i?c:clip(c,w-24),i?x+w/2:x+14,y+(sub?44:34)); }
+        x+=w; }); y+=rh; });
+    g.textAlign='left'; y+=18; };
+  newPage();
+  if(S.result){ g.fillStyle='#FFF3D6'; g.fillRect(M,y,TW,84); g.fillStyle='#8a6d1f'; g.font='800 30px '+FF; g.textAlign='center'; g.fillText(clip(S.result,TW-40),W/2,y+53); g.textAlign='left'; y+=110; }
+  if(S.pom) para(S.pom,'600 26px '+FF,'#12211B',44);
+  (S.innings||[]).forEach(I=>{ need(260); y+=14; g.fillStyle='#EEF3F0'; g.fillRect(M,y,TW,68); g.fillStyle='#0B6E4F'; g.font='800 30px '+FF; g.fillText(clip(I.title,TW*.55),M+16,y+45); g.textAlign='right'; g.fillText(I.score,M+TW-16,y+45); g.textAlign='left'; y+=86;
+    table(S.batCols,I.bat,true); if(I.extras) para(I.extras,'500 22px '+FF,'#5B6E66',34); y+=10;
+    if(I.bowl.length) table(S.bowlCols,I.bowl,false);
+    if(I.fow){ para(S.fowWord,'800 22px '+FF,'#334155',34); para(I.fow,'400 22px '+FF,'#5B6E66',34); } y+=24; });
+  if(!(S.innings||[]).length) para(S.noInn,'500 26px '+FF,'#5B6E66',44);
+  pages.push(cv);
+  const jpgs=await Promise.all(pages.map(p=>new Promise(r=>p.toBlob(async b=>r(new Uint8Array(await b.arrayBuffer())),'image/jpeg',0.88))));
+  return tspdfFile(jpgs,W,H);
+}
+async function tspdfSave(blob,fn,preferShare){
+  const f=new File([blob],fn,{type:'application/pdf'});
+  if(preferShare){ try{ if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:fn}); return 'shared'; } }catch(e){ if(e&&e.name==='AbortError') return 'cancel'; } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500); return 'saved';
+}
+
+/* ==========================================================================
+   DOWNLOAD PDF SCORECARD (additive) — saves a real .pdf file (Bangla-safe).
+   The existing "Export PDF" (print dialog) is untouched.
+   ========================================================================== */
+function spdfUnesc(s){ return String(s==null?'':s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'); }
+async function downloadScorecardPDF(m){
+  if(!m){ toast('No match selected'); return; }
+  try{
+    toast('Preparing PDF…');
+    const bn=(typeof fdBn==='function')&&fdBn(), L=(en,b)=>bn?b:en, bpo=m.ballsPerOver;
+    const innings=(m.innings||[]).filter(inn=>inn.battingOrder&&inn.battingOrder.length||inn.balls>0).map(inn=>{ const ex=inn.extras||{}, exT=(ex.wide||0)+(ex.noball||0)+(ex.bye||0)+(ex.legbye||0);
+      return { title:teamOf(m,inn.battingTeam).name, score:inn.runs+'/'+inn.wickets+' ('+fmtOvers(inn.balls,bpo)+' ov)',
+        bat:inn.battingOrder.map(pid=>{ const b=inn.batters[pid]; return [{t:playerName(pid),s:b.out?spdfUnesc(dismissalText(inn,pid)):L('not out','নট আউট')},b.runs,b.balls,b.fours,b.sixes,strikeRate(b.runs,b.balls)]; }),
+        bowl:Object.keys(inn.bowlers).map(pid=>{ const b=inn.bowlers[pid]; return [playerName(pid),fmtOvers(b.balls,bpo),b.maidens||0,b.runs,b.wickets,economy(b.runs,b.balls)]; }),
+        extras:L('Extras','অতিরিক্ত')+': '+exT+' (wd '+(ex.wide||0)+', nb '+(ex.noball||0)+', b '+(ex.bye||0)+', lb '+(ex.legbye||0)+')',
+        fow:(inn.fallOfWickets||[]).map(f=>f.wicket+'-'+f.score+' ('+spdfUnesc(f.playerName)+', '+f.over+')').join(', ') }; });
+    const pom=m.awards&&m.awards.playerOfMatch;
+    const S={ title:L('Match Scorecard','ম্যাচ স্কোরকার্ড'), head:teamOf(m,'A').name+' vs '+teamOf(m,'B').name,
+      sub:fmtDate(m.date)+(m.venue?' · '+m.venue:'')+(m.overs?' · '+m.overs+' '+L('overs','ওভার'):''),
+      result:m.result?m.result.text:(m.status==='live'?L('Match in progress','খেলা চলছে'):''), pom:pom?'⭐ '+L('Player of the match','ম্যাচ সেরা')+': '+playerName(pom):'',
+      logo:(typeof APP_LOGO!=='undefined')?APP_LOGO:null, footer:'TSC ScorePro', pageWord:L('Page','পৃষ্ঠা'), fowWord:L('Fall of wickets','উইকেট পতন'), noInn:L('No innings played yet.','এখনো কোনো ইনিংস খেলা হয়নি।'),
+      batCols:[L('Batter','ব্যাটার'),'R','B','4s','6s','SR'], bowlCols:[L('Bowler','বোলার'),'O','M','R','W','Econ'], innings };
+    const blob=await tspdfBuild(S);
+    const fn=(S.head+'-'+(m.date||'')).replace(/[^\w\u0980-\u09FF]+/g,'-').replace(/^-+|-+$/g,'')+'.pdf';
+    const r=await tspdfSave(blob,fn,true); if(r==='saved') toast('PDF saved to Downloads');
+  }catch(err){ toast('Could not make PDF: '+String(err&&err.message||err)); }
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest&&e.target.closest('[data-spdf]'); if(!t) return;
+  const m=getMatch(t.dataset.spdf)||currentMatch(); downloadScorecardPDF(m);
+});
 
 /* ==========================================================================
    SCORECARD IMAGE SHARING (additive)
